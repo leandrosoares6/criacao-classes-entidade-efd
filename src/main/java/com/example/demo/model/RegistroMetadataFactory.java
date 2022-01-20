@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RegistroMetadataFactory {
+        private static List<RegistroTest> registros = new ArrayList<RegistroTest>();
+
         private RegistroMetadataFactory() {}
 
         public static List<RegistroTest> criaMetadados() {
-                List<RegistroTest> registros = new ArrayList<RegistroTest>();
                 List<Campo> campos = new ArrayList<Campo>();
 
                 // ----- ######## 0000 ########
@@ -2809,12 +2810,10 @@ public class RegistroMetadataFactory {
                 campos.clear();
                 // ------------------------------------------------------------
 
-                registros.addAll(getRegistrosRestantes(registros));
-
-                return registros;
+                return getRegistrosRestantes();
         }
 
-        private static List<RegistroTest> getRegistrosRestantes(List<RegistroTest> registros) {
+        private static List<RegistroTest> getRegistrosRestantes() {
                 List<Campo> campos = new ArrayList<Campo>();
 
                 // ----- ######## 1500 ########

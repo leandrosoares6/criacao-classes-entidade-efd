@@ -14,11 +14,14 @@ public class EntidadeRegistroFactoryImpl implements EntidadeRegistroFactory {
 
     @Override
     public Object criaInstanciaDeRegistro(String nomeClasseRegistro, String linha) {
-        UnitSourceGenerator gerador = UnitSourceGenerator.create(PACOTE);
+        UnitSourceGenerator gerador = SourceGeneratorFactory.get(nomeClasseRegistro);
         ComponentSupplier componentSupplier = ComponentContainer.getInstance();
         ClassFactory classFactory = componentSupplier.getClassFactory();
         ClassFactory.ClassRetriever classRetriever = classFactory.loadOrBuildAndDefine(gerador);
-        Class<?> classeGerada = classRetriever.get(PACOTE + "." + nomeClasseRegistro);
+        String caminhoCompletoClasseRegistro = PACOTE + "." + nomeClasseRegistro;
+
+        Class<?> classeGerada = classRetriever.get(caminhoCompletoClasseRegistro);
+        classRetriever.close();
         return Constructors.newInstanceOf(classeGerada, linha);
     }
 

@@ -10,6 +10,7 @@ import com.example.demo.model.Campo;
 import com.example.demo.model.Registro;
 import com.example.demo.model.RegistroMetadataFactory;
 import com.example.demo.model.RegistroTest;
+import com.example.demo.service.SourceGeneratorFactory;
 import com.example.demo.util.CampoTipoData;
 import com.example.demo.util.CampoTipoDataPart;
 import com.example.demo.util.CampoTipoId;
@@ -30,6 +31,8 @@ public class RegistrosClassFactory {
 	private static final String SCHEMA = "APL_EFD";
 	private static final String PREFIXO = "Registro";
 
+	private RegistrosClassFactory() {}
+
 	static void criaRegistros() {
 		List<RegistroTest> registros = RegistroMetadataFactory.criaMetadados();
 		criaClasses(registros);
@@ -37,9 +40,10 @@ public class RegistrosClassFactory {
 
 	private static void criaClasses(List<RegistroTest> registros) {
 		for (RegistroTest registroTest : registros) {
-			UnitSourceGenerator gerador = UnitSourceGenerator.create(PACOTE);
+			String nomeClasseRegistro = PREFIXO + registroTest.getNome();
+			UnitSourceGenerator gerador = SourceGeneratorFactory.get(nomeClasseRegistro, PACOTE);
 			ClassSourceGenerator registro = ClassSourceGenerator
-					.create(TypeDeclarationSourceGenerator.create(PREFIXO + registroTest.getNome()))
+					.create(TypeDeclarationSourceGenerator.create(nomeClasseRegistro))
 					.addModifier(Modifier.PUBLIC)
 					.addAnnotation(AnnotationSourceGenerator.create(Getter.class))
 					.addAnnotation(AnnotationSourceGenerator.create(Setter.class))
@@ -59,15 +63,20 @@ public class RegistrosClassFactory {
 			registro.addConstructor(FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
 					.addParameter(VariableSourceGenerator.create(String.class, "linha"))
 					.addBodyCodeLine("super(linha);")).expands(Registro.class);
+
 			gerador.addClass(registro);
 
-			// System.out.println("\nRegistro gerado:\n" + gerador.make());
-			String caminhoPastaRegistros = System.getProperty("user.dir") + "/src/main/java/";
-			gerador.storeToClassPath(caminhoPastaRegistros);
+			// compartilha UnitSourceGenerator com outras classes
+			SourceGeneratorFactory.set(registroTest.getNome(), gerador);
+
+			// String caminhoPastaRegistros = System.getProperty("user.dir") + "/src/main/java/";
+			// gerador.storeToClassPath(caminhoPastaRegistros);
+
 		}
 	}
 
 	private static void criaColunas(List<Campo> campos, ClassSourceGenerator registro) {
+		var existeCampoId = false;
 		for (Campo campo : campos) {
 			VariableSourceGenerator field = VariableSourceGenerator
 					.create(TypeDeclarationSourceGenerator.create(String.class),
@@ -86,6 +95,7 @@ public class RegistrosClassFactory {
 
 			if (campo.getNome().equals("ID")) {
 				field.addAnnotation(AnnotationSourceGenerator.create(Id.class));
+				existeCampoId = true;
 			}
 			if (campo.getEId()) {
 				field.addAnnotation(AnnotationSourceGenerator.create(CampoTipoId.class));
@@ -98,6 +108,16 @@ public class RegistrosClassFactory {
 			}
 
 			registro.addField(field);
+		}
+
+		if (!existeCampoId) {
+			registro.addField(VariableSourceGenerator
+					.create(TypeDeclarationSourceGenerator.create(String.class), "id")
+					.addModifier(Modifier.PRIVATE)
+					.addAnnotation(AnnotationSourceGenerator.create(Id.class))
+					.addAnnotation(AnnotationSourceGenerator.create(Column.class).addParameter(
+							"name",
+							VariableSourceGenerator.create(String.format("\"%s\"", "ID")))));
 		}
 	}
 }
