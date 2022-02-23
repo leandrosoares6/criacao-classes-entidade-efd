@@ -1,10 +1,14 @@
 HELP.md
 target/
+files/
 bin/
 .mvn/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+src/main/java/com/example/demo/model/registros/
+
+
 
 ### STS ###
 .apt_generated

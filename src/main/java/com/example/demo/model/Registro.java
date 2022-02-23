@@ -1,36 +1,57 @@
 package com.example.demo.model;
 
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import javax.persistence.Id;
-import com.example.demo.util.Indice;
-import lombok.NoArgsConstructor;
+import java.util.List;
+import java.util.Objects;
+import com.example.demo.enums.TipoOcorrencia;
+import lombok.Getter;
 
-@NoArgsConstructor
+
+@Getter
 public class Registro {
 
-    public Registro(String linha) {
-        String[] linhaArray = linha.split("\\|");
-        var indiceInicialCampos = 2;
+	private String nome;
+	private String nomeRegistroPai;
+	private TipoOcorrencia ocorrencia;
+	private List<Campo> campos;
+	private boolean possuiDataPart;
 
-        var fieldsSorted =
-                Stream.of(getClass().getDeclaredFields())
-                        .filter(f -> !f.isAnnotationPresent(Id.class))
-                        .sorted((f1, f2) -> f1.getAnnotation(Indice.class).valor()
-                                - f2.getAnnotation(Indice.class).valor())
-                        .collect(Collectors.toList());
+	private static final String PADRAO_NOME_REGISTRO = "[A-Z0-9]\\d{3}";
 
-        IntStream.range(0, linhaArray.length - indiceInicialCampos).forEach(i -> {
-            if (i < fieldsSorted.size()) {
-                fieldsSorted.get(i).setAccessible(true);
-                try {
-                    fieldsSorted.get(i).set(this, linhaArray[i + indiceInicialCampos]);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
+	public Registro(String nome, String nomeRegistroPai, TipoOcorrencia ocorrencia,
+			List<Campo> campos, boolean possuiDataPart) {
+
+		setNome(nome);
+		setNomeRegistroPai(nomeRegistroPai);
+		this.ocorrencia = ocorrencia;
+		setCampos(campos);
+		this.possuiDataPart = possuiDataPart;
+	}
+
+	public void setNome(String nome) {
+		validaNomeRegistro(nome);
+		this.nome = nome;
+	}
+
+	public void setNomeRegistroPai(String nomeRegistroPai) {
+		validaNomeRegistro(nomeRegistroPai);
+		this.nomeRegistroPai = nomeRegistroPai;
+	}
+
+	public void setCampos(List<Campo> campos) {
+		if (Objects.isNull(campos) || campos.isEmpty()) {
+			throw new IllegalArgumentException("Lista de campos não pode ser nula ou vazia.");
+		}
+		this.campos = campos;
+	}
+
+	private void validaNomeRegistro(String nome) {
+		if (Objects.isNull(nome) || nome.isEmpty()) {
+			throw new IllegalArgumentException("Nome do registro não pode ser nulo ou vazio.");
+		}
+
+		if (!nome.matches(PADRAO_NOME_REGISTRO)) {
+			throw new IllegalArgumentException("Nome do registro no padrão incorreto.");
+		}
+	}
 
 }

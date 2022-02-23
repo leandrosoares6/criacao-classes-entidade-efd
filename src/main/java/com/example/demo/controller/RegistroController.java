@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/registros")
 public class RegistroController {
 
-    @Autowired
-    private RegistroService service;
+	@Autowired
+	private RegistroService service;
 
-    @GetMapping
-    public ResponseEntity<List<?>> listaRegistros() {
-        return ResponseEntity.ok(service.listaRegistros());
-    }
+	@GetMapping
+	public ResponseEntity<List<?>> listaRegistros() {
+		return ResponseEntity.ok(service.listaRegistros());
+	}
 
 }

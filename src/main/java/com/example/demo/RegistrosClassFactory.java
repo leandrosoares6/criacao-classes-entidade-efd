@@ -1,20 +1,22 @@
 package com.example.demo;
 
 import java.lang.reflect.Modifier;
+import java.util.Date;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import com.example.demo.enums.TipoOcorrencia;
 import com.example.demo.model.Campo;
 import com.example.demo.model.Registro;
+import com.example.demo.model.RegistroBase;
 import com.example.demo.model.RegistroMetadataFactory;
-import com.example.demo.model.RegistroTest;
+import com.example.demo.model.anotacoes.Indice;
+import com.example.demo.model.anotacoes.Metadados;
+import com.example.demo.model.anotacoes.PossuiDataPart;
 import com.example.demo.service.SourceGeneratorFactory;
-import com.example.demo.util.CampoTipoData;
-import com.example.demo.util.CampoTipoDataPart;
-import com.example.demo.util.CampoTipoId;
-import com.example.demo.util.Indice;
+import com.example.demo.util.StringUtils;
 import org.burningwave.core.classes.AnnotationSourceGenerator;
 import org.burningwave.core.classes.ClassSourceGenerator;
 import org.burningwave.core.classes.FunctionSourceGenerator;
@@ -27,20 +29,23 @@ import lombok.Setter;
 import lombok.ToString;
 
 public class RegistrosClassFactory {
+	private static final String FORMATO_STRING_CAMPOS = "\"%s\"";
 	private static final String PACOTE = "com.example.demo.model.registros";
 	private static final String SCHEMA = "APL_EFD";
+	private static final String PREFIXO_TABELAS = "TAB_EFD_";
 	private static final String PREFIXO = "Registro";
+	private static final String TIPO_DADO_ID = "NUMBER(19,0)";
 
 	private RegistrosClassFactory() {}
 
 	static void criaRegistros() {
-		List<RegistroTest> registros = RegistroMetadataFactory.criaMetadados();
+		List<Registro> registros = RegistroMetadataFactory.criaMetadados();
 		criaClasses(registros);
 	}
 
-	private static void criaClasses(List<RegistroTest> registros) {
-		for (RegistroTest registroTest : registros) {
-			String nomeClasseRegistro = PREFIXO + registroTest.getNome();
+	private static void criaClasses(List<Registro> registros) {
+		for (Registro registroMetadados : registros) {
+			String nomeClasseRegistro = PREFIXO + registroMetadados.getNome();
 			UnitSourceGenerator gerador = SourceGeneratorFactory.get(nomeClasseRegistro, PACOTE);
 			ClassSourceGenerator registro = ClassSourceGenerator
 					.create(TypeDeclarationSourceGenerator.create(nomeClasseRegistro))
@@ -50,74 +55,166 @@ public class RegistrosClassFactory {
 					.addAnnotation(AnnotationSourceGenerator.create(NoArgsConstructor.class))
 					.addAnnotation(AnnotationSourceGenerator.create(ToString.class))
 					.addAnnotation(AnnotationSourceGenerator.create(Entity.class))
-					.addAnnotation(AnnotationSourceGenerator.create(Table.class)
-							.addParameter("name",
-									VariableSourceGenerator.create(String.format("\"%s\"",
-											registroTest.getNomeTabelaBd())))
-							.addParameter("schema", VariableSourceGenerator
-									.create(String.format("\"%s\"", SCHEMA))));
+					.addAnnotation(AnnotationSourceGenerator.create(Table.class).addParameter(
+							"name",
+							VariableSourceGenerator.create(String.format(FORMATO_STRING_CAMPOS,
+									PREFIXO_TABELAS + registroMetadados.getNome())))
+							.addParameter("schema",
+									VariableSourceGenerator
+											.create(String.format(FORMATO_STRING_CAMPOS, SCHEMA))))
+					.addAnnotation(AnnotationSourceGenerator.create(Metadados.class).addParameter(
+							"nomeRegistroPai",
+							VariableSourceGenerator.create(String.format(FORMATO_STRING_CAMPOS,
+									registroMetadados.getNomeRegistroPai())))
+							.addParameter("ocorrencia",
+									VariableSourceGenerator
+											.create(String.format(FORMATO_STRING_CAMPOS,
+													registroMetadados.getOcorrencia().name()))));
+			if (registroMetadados.isPossuiDataPart()) {
+				registro.addAnnotation(AnnotationSourceGenerator.create(PossuiDataPart.class));
+			}
 
-			criaColunas(registroTest.getCampos(), registro);
+			criaColunas(registroMetadados, registro);
 
 			// cria construtor com base na linha do arquivo
-			registro.addConstructor(FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
-					.addParameter(VariableSourceGenerator.create(String.class, "linha"))
-					.addBodyCodeLine("super(linha);")).expands(Registro.class);
+			// registro.addConstructor(FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
+			// .addParameter(VariableSourceGenerator.create(String.class, "linha"))
+			// .addBodyCodeLine("super(linha);")).expands(RegistroBase.class);
+
+
+			// cria construtor com TipoOcorrencia.UNICA com dataPart
+			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)
+					&& registroMetadados.isPossuiDataPart()) {
+				registro.addConstructor(FunctionSourceGenerator.create()
+						.addModifier(Modifier.PUBLIC)
+						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
+						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
+						.addParameter(VariableSourceGenerator.create(Date.class, "dataPart"))
+						.addBodyCodeLine("super(linha, id, dataPart);"))
+						.expands(RegistroBase.class);
+			}
+
+			// cria construtor com TipoOcorrencia.UNICA sem dataPart
+			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)
+					&& !registroMetadados.isPossuiDataPart()) {
+				registro.addConstructor(
+						FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
+								.addParameter(VariableSourceGenerator.create(String.class, "linha"))
+								.addParameter(VariableSourceGenerator.create(Long.class, "id"))
+								.addBodyCodeLine("super(linha, id);"))
+						.expands(RegistroBase.class);
+			}
+
+			// cria construtor com TipoOcorrencia.MULTIPLA com dataPart
+			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.MULTIPLA)
+					&& registroMetadados.isPossuiDataPart()) {
+				registro.addConstructor(FunctionSourceGenerator.create()
+						.addModifier(Modifier.PUBLIC)
+						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
+						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
+						.addParameter(VariableSourceGenerator.create(Long.class, "idRegistroPai"))
+						.addParameter(VariableSourceGenerator.create(Date.class, "dataPart"))
+						.addBodyCodeLine("super(linha, id, idRegistroPai, dataPart);"))
+						.expands(RegistroBase.class);
+			}
+
+			// cria construtor com TipoOcorrencia.MULTIPLA sem dataPart
+			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.MULTIPLA)
+					&& !registroMetadados.isPossuiDataPart()) {
+				registro.addConstructor(FunctionSourceGenerator.create()
+						.addModifier(Modifier.PUBLIC)
+						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
+						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
+						.addParameter(VariableSourceGenerator.create(Long.class, "idRegistroPai"))
+						.addBodyCodeLine("super(linha, id, idRegistroPai);"))
+						.expands(RegistroBase.class);
+			}
+
+			// cria metodo para obter nome do registro pai
+			registro.addMethod(FunctionSourceGenerator.create("getNomeRegistroPai")
+					.addModifier(Modifier.PUBLIC)
+					.setReturnType(TypeDeclarationSourceGenerator.create(String.class))
+					.addBodyCodeLine("return super.getNomeRegistroPai();"));
+
+			// cria metodo para obter a ocorrencia
+			registro.addMethod(FunctionSourceGenerator.create("getOcorrencia")
+					.addModifier(Modifier.PUBLIC)
+					.setReturnType(TypeDeclarationSourceGenerator.create(TipoOcorrencia.class))
+					.addBodyCodeLine("return super.getOcorrencia();"));
 
 			gerador.addClass(registro);
 
 			// compartilha UnitSourceGenerator com outras classes
-			SourceGeneratorFactory.set(registroTest.getNome(), gerador);
+			SourceGeneratorFactory.set(registroMetadados.getNome(), gerador);
 
-			// String caminhoPastaRegistros = System.getProperty("user.dir") + "/src/main/java/";
-			// gerador.storeToClassPath(caminhoPastaRegistros);
+			String caminhoPastaRegistros = System.getProperty("user.dir") + "/src/main/java/";
+			gerador.storeToClassPath(caminhoPastaRegistros);
 
 		}
 	}
 
-	private static void criaColunas(List<Campo> campos, ClassSourceGenerator registro) {
-		var existeCampoId = false;
-		for (Campo campo : campos) {
+	private static void criaColunas(Registro registroMetadados, ClassSourceGenerator registro) {
+		for (Campo campo : registroMetadados.getCampos()) {
+			Class<?> tipoCampo = StringUtils.obterTipoDoCampo(campo.getTipoDeDado());
+
 			VariableSourceGenerator field = VariableSourceGenerator
-					.create(TypeDeclarationSourceGenerator.create(String.class),
+					.create(TypeDeclarationSourceGenerator.create(tipoCampo),
 							campo.getNomeAtributo())
 					.addModifier(Modifier.PRIVATE)
 					.addAnnotation(AnnotationSourceGenerator.create(Column.class)
-							.addParameter("name", VariableSourceGenerator
-									.create(String.format("\"%s\"", campo.getNome())))
-					// .addParameter("columnDefinition", VariableSourceGenerator
-					// .create(String.format("\"%s\"", campo.getFuncaoBd())))
+							.addParameter("name",
+									VariableSourceGenerator.create(
+											String.format(FORMATO_STRING_CAMPOS, campo.getNome())))
+							.addParameter("columnDefinition", VariableSourceGenerator.create(
+									String.format(FORMATO_STRING_CAMPOS, campo.getTipoDeDado())))
 
 					)
 					.addAnnotation(AnnotationSourceGenerator.create(Indice.class).addParameter(
 							"valor",
 							VariableSourceGenerator.create(String.valueOf(campo.getSequencial()))));
 
-			if (campo.getNome().equals("ID")) {
-				field.addAnnotation(AnnotationSourceGenerator.create(Id.class));
-				existeCampoId = true;
-			}
-			if (campo.getEId()) {
-				field.addAnnotation(AnnotationSourceGenerator.create(CampoTipoId.class));
-			}
-			if (campo.getEData()) {
-				field.addAnnotation(AnnotationSourceGenerator.create(CampoTipoData.class));
-			}
-			if (campo.getEDataPart()) {
-				field.addAnnotation(AnnotationSourceGenerator.create(CampoTipoDataPart.class));
-			}
-
 			registro.addField(field);
 		}
 
-		if (!existeCampoId) {
+		registro.addField(VariableSourceGenerator
+				.create(TypeDeclarationSourceGenerator.create(Long.class), "id")
+				.addModifier(Modifier.PRIVATE)
+				.addAnnotation(AnnotationSourceGenerator.create(Id.class))
+				.addAnnotation(AnnotationSourceGenerator.create(Column.class)
+						.addParameter("name",
+								VariableSourceGenerator
+										.create(String.format(FORMATO_STRING_CAMPOS, "ID")))
+						.addParameter("columnDefinition", VariableSourceGenerator
+								.create(String.format(FORMATO_STRING_CAMPOS, TIPO_DADO_ID)))));
+
+		if (registroMetadados.isPossuiDataPart()) {
 			registro.addField(VariableSourceGenerator
-					.create(TypeDeclarationSourceGenerator.create(String.class), "id")
+					.create(TypeDeclarationSourceGenerator.create(Date.class), "dataPart")
 					.addModifier(Modifier.PRIVATE)
-					.addAnnotation(AnnotationSourceGenerator.create(Id.class))
-					.addAnnotation(AnnotationSourceGenerator.create(Column.class).addParameter(
-							"name",
-							VariableSourceGenerator.create(String.format("\"%s\"", "ID")))));
+					.addAnnotation(AnnotationSourceGenerator.create(Column.class)
+							.addParameter("name",
+									VariableSourceGenerator.create(
+											String.format(FORMATO_STRING_CAMPOS, "DATA_PART")))
+							.addParameter("columnDefinition", VariableSourceGenerator
+									.create(String.format(FORMATO_STRING_CAMPOS, "DATE")))
+
+					));
+		}
+
+		if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.MULTIPLA)) {
+			var nomeColunaRegistroPai = String.format("%s%s_ID", PREFIXO_TABELAS,
+					registroMetadados.getNomeRegistroPai());
+
+			registro.addField(VariableSourceGenerator
+					.create(TypeDeclarationSourceGenerator.create(Long.class), "idRegistroPai")
+					.addModifier(Modifier.PRIVATE)
+					.addAnnotation(AnnotationSourceGenerator.create(Column.class)
+							.addParameter("name", VariableSourceGenerator.create(
+									String.format(FORMATO_STRING_CAMPOS, nomeColunaRegistroPai)))
+							.addParameter("columnDefinition", VariableSourceGenerator
+									.create(String.format(FORMATO_STRING_CAMPOS, TIPO_DADO_ID)))
+
+					));
 		}
 	}
 }

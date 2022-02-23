@@ -10,19 +10,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class EntidadeRegistroFactoryImpl implements EntidadeRegistroFactory {
 
-    private static final String PACOTE = "com.example.demo.model.registros";
+	private static final String PACOTE = "com.example.demo.model.registros";
 
-    @Override
-    public Object criaInstanciaDeRegistro(String nomeClasseRegistro, String linha) {
-        UnitSourceGenerator gerador = SourceGeneratorFactory.get(nomeClasseRegistro);
-        ComponentSupplier componentSupplier = ComponentContainer.getInstance();
-        ClassFactory classFactory = componentSupplier.getClassFactory();
-        ClassFactory.ClassRetriever classRetriever = classFactory.loadOrBuildAndDefine(gerador);
-        String caminhoCompletoClasseRegistro = PACOTE + "." + nomeClasseRegistro;
+	@Override
+	public Object criaInstanciaDeRegistro(String nomeClasseRegistro, Object... args) {
+		UnitSourceGenerator gerador = SourceGeneratorFactory.get(nomeClasseRegistro);
+		ComponentSupplier componentSupplier = ComponentContainer.getInstance();
+		ClassFactory classFactory = componentSupplier.getClassFactory();
+		ClassFactory.ClassRetriever classRetriever = classFactory.loadOrBuildAndDefine(gerador);
+		String caminhoCompletoClasseRegistro = PACOTE + "." + nomeClasseRegistro;
 
-        Class<?> classeGerada = classRetriever.get(caminhoCompletoClasseRegistro);
-        classRetriever.close();
-        return Constructors.newInstanceOf(classeGerada, linha);
-    }
+		Class<?> classeGerada = classRetriever.get(caminhoCompletoClasseRegistro);
+		classRetriever.close();
+		return Constructors.newInstanceOf(classeGerada, args);
+	}
 
 }
