@@ -12,9 +12,7 @@ public class SourceGeneratorFactory {
 	private SourceGeneratorFactory() {}
 
 	public static UnitSourceGenerator get(String className, String packageName) {
-		if (!unitSourceGenerators.containsKey(className)) {
-			unitSourceGenerators.put(className, UnitSourceGenerator.create(packageName));
-		}
+		unitSourceGenerators.computeIfAbsent(className, k -> UnitSourceGenerator.create(packageName));
 		return unitSourceGenerators.get(className);
 	}
 
