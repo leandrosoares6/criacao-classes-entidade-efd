@@ -3,8 +3,6 @@ package com.example.demo.service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +26,8 @@ public class RegistroService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(RegistroService.class);
 	private static final String PACOTE = "com.example.demo.model.registros";
+	private static final String REGISTRO_PAI = "0000";
+	private static final String SEPARADOR_LINHA = "\\|";
 	private final EntidadeRegistroFactory classFactory;
 
 	public RegistroService(@Autowired EntidadeRegistroFactory classFactory) {
@@ -46,7 +46,7 @@ public class RegistroService {
 		// + "|E200|PI|01032021|31032021|\n" + "\n"));
 
 		conteudoArquivo.lines().filter(linha -> !linha.isBlank()).forEach(linha -> {
-			String[] campos = linha.split("\\|");
+			String[] campos = linha.split(SEPARADOR_LINHA);
 
 			if (Objects.isNull(ClassUtils.obterClassePorCaminho(PACOTE + "." + campos[1]))) {
 				throw new IllegalStateException(String
@@ -63,7 +63,7 @@ public class RegistroService {
 		return registros;
 	}
 
-	public List<Entity> processaArquivoEfd(Long teaId, Date teaDataCarga, BufferedReader arquivoEfd)
+	public List<Entity> processarRegistros(Long teaId, Date teaDataCarga, BufferedReader arquivoEfd)
 			throws IOException {
 		Map<String, Long> cacheDeRegistrosPai = new HashMap<>();
 		List<Entity> registrosProcessados = new ArrayList<>();
@@ -82,11 +82,11 @@ public class RegistroService {
 						"A classe para o registro %s não foi encontrada.", nomeRegistroAtual));
 			}
 
-			if (nomeRegistroAtual.equals("0000")) {
-				LOGGER.info("Processando registro 0000");
+			if (nomeRegistroAtual.equals(REGISTRO_PAI)) {
+				LOGGER.info("Processando registro {}", REGISTRO_PAI);
 
-				registrosProcessados.add((Entity) classFactory.criaInstanciaDeRegistro(
-						"Registro" + nomeRegistroAtual, linha, teaId, teaDataCarga));
+				registrosProcessados.add((Entity) ClassUtils.obterInstancia(classeRegistro, linha,
+						teaId, teaDataCarga));
 				cacheDeRegistrosPai.put(nomeRegistroAtual, teaId);
 				continue;
 			}
@@ -129,47 +129,25 @@ public class RegistroService {
 			Class<?> classeRegistro, TipoOcorrencia ocorrencia, boolean possuiDataPart,
 			Long idRegistroPai, Long idRegistroAtual) {
 		Object instanciaClasseRegistro = null;
+
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && possuiDataPart) {
-			try {
-				instanciaClasseRegistro =
-						classeRegistro.getConstructor(String.class, Long.class, Date.class)
-								.newInstance(linha, idRegistroPai, teaDataCarga);
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
+			instanciaClasseRegistro =
+					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai, teaDataCarga);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && !possuiDataPart) {
-			try {
-				instanciaClasseRegistro = classeRegistro.getConstructor(String.class, Long.class)
-						.newInstance(linha, idRegistroPai);
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
+			instanciaClasseRegistro =
+					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.MULTIPLA) && possuiDataPart) {
-			try {
-				instanciaClasseRegistro = classeRegistro
-						.getConstructor(String.class, Long.class, Long.class, Date.class)
-						.newInstance(linha, idRegistroAtual, idRegistroPai, teaDataCarga);
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
+			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha,
+					idRegistroAtual, idRegistroPai, teaDataCarga);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.MULTIPLA) && !possuiDataPart) {
-			try {
-				instanciaClasseRegistro =
-						classeRegistro.getConstructor(String.class, Long.class, Long.class)
-								.newInstance(linha, idRegistroAtual, idRegistroPai);
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
-			}
+			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha,
+					idRegistroAtual, idRegistroPai);
 		}
 		return instanciaClasseRegistro;
 	}
@@ -180,3 +158,4 @@ public class RegistroService {
 				String.valueOf(teaId.intValue()).concat(String.valueOf(incrementoFormatado)));
 	}
 }
+

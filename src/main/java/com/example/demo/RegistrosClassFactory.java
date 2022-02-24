@@ -130,18 +130,6 @@ public class RegistrosClassFactory {
 						.expands(RegistroBase.class);
 			}
 
-			// cria metodo para obter nome do registro pai
-			registro.addMethod(FunctionSourceGenerator.create("getNomeRegistroPai")
-					.addModifier(Modifier.PUBLIC)
-					.setReturnType(TypeDeclarationSourceGenerator.create(String.class))
-					.addBodyCodeLine("return super.getNomeRegistroPai();"));
-
-			// cria metodo para obter a ocorrencia
-			registro.addMethod(FunctionSourceGenerator.create("getOcorrencia")
-					.addModifier(Modifier.PUBLIC)
-					.setReturnType(TypeDeclarationSourceGenerator.create(TipoOcorrencia.class))
-					.addBodyCodeLine("return super.getOcorrencia();"));
-
 			gerador.addClass(registro);
 
 			// compartilha UnitSourceGenerator com outras classes
