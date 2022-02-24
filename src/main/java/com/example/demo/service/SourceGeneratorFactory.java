@@ -9,7 +9,8 @@ public class SourceGeneratorFactory {
 	private static final String DEFAULT_PACKAGE = "com.example.demo.model.registros";
 	private static Map<String, UnitSourceGenerator> unitSourceGenerators = new HashMap<>();
 
-	private SourceGeneratorFactory() {}
+	private SourceGeneratorFactory() {
+	}
 
 	public static UnitSourceGenerator get(String className, String packageName) {
 		unitSourceGenerators.computeIfAbsent(className, k -> UnitSourceGenerator.create(packageName));

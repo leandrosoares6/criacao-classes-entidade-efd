@@ -9,15 +9,19 @@ public class ClassUtils {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ClassUtils.class);
 
-	private ClassUtils() {}
+	private ClassUtils() {
+	}
 
 	public static Class<?> obterClassePorCaminho(String pathClass) {
+		Class<?> clazz = null;
 		try {
-			return Class.forName(pathClass, false, ClassUtils.class.getClassLoader());
+			clazz = Class.forName(pathClass, false, ClassUtils.class.getClassLoader());
 		} catch (ClassNotFoundException e) {
 			LOGGER.error("Classe não encontrada: {}", pathClass);
-			return null;
+			e.printStackTrace();
 		}
+
+		return clazz;
 	}
 
 	public static Object obterInstancia(Class<?> classe, Object... args) {

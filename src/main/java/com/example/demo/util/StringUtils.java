@@ -5,7 +5,8 @@ import java.util.stream.IntStream;
 
 public class StringUtils {
 
-	private StringUtils() {}
+	private StringUtils() {
+	}
 
 	public static String upperSnackCaseToCamelCase(String upperSnackCase) {
 		StringBuilder sb = new StringBuilder();

@@ -11,10 +11,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.persistence.Entity;
 import com.example.demo.enums.TipoOcorrencia;
 import com.example.demo.model.anotacoes.Metadados;
 import com.example.demo.model.anotacoes.PossuiDataPart;
+import com.example.demo.repository.RegistrosRepository;
 import com.example.demo.util.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +29,10 @@ public class RegistroService {
 	private static final String REGISTRO_PAI = "0000";
 	private static final String SEPARADOR_LINHA = "\\|";
 	private final EntidadeRegistroFactory classFactory;
+
+	@Autowired
+	private RegistrosRepository repository;
+
 
 	public RegistroService(@Autowired EntidadeRegistroFactory classFactory) {
 		this.classFactory = classFactory;
@@ -63,10 +67,10 @@ public class RegistroService {
 		return registros;
 	}
 
-	public List<Entity> processarRegistros(Long teaId, Date teaDataCarga, BufferedReader arquivoEfd)
+	public List<Object> processarRegistros(Long teaId, Date teaDataCarga, BufferedReader arquivoEfd)
 			throws IOException {
 		Map<String, Long> cacheDeRegistrosPai = new HashMap<>();
-		List<Entity> registrosProcessados = new ArrayList<>();
+		List<Object> registrosProcessados = new ArrayList<>();
 
 		AtomicInteger contadorDeLinha = new AtomicInteger(0);
 
@@ -74,7 +78,8 @@ public class RegistroService {
 			var numeroLinhaAtual = contadorDeLinha.incrementAndGet();
 			var colunas = linha.split("\\|");
 			var nomeRegistroAtual = colunas[1];
-			var caminhoClasse = PACOTE + "." + nomeRegistroAtual;
+			var nomeClasseRegistroAtual = "Registro" + nomeRegistroAtual;
+			var caminhoClasse = PACOTE + "." + nomeClasseRegistroAtual;
 			Class<?> classeRegistro = ClassUtils.obterClassePorCaminho(caminhoClasse);
 
 			if (Objects.isNull(classeRegistro)) {
@@ -85,14 +90,13 @@ public class RegistroService {
 			if (nomeRegistroAtual.equals(REGISTRO_PAI)) {
 				LOGGER.info("Processando registro {}", REGISTRO_PAI);
 
-				registrosProcessados.add((Entity) ClassUtils.obterInstancia(classeRegistro, linha,
+				registrosProcessados.add(ClassUtils.obterInstancia(classeRegistro, linha,
 						teaId, teaDataCarga));
 				cacheDeRegistrosPai.put(nomeRegistroAtual, teaId);
 				continue;
 			}
 
-			String nomeRegistroPai =
-					classeRegistro.getAnnotation(Metadados.class).nomeRegistroPai();
+			String nomeRegistroPai = classeRegistro.getAnnotation(Metadados.class).nomeRegistroPai();
 			TipoOcorrencia ocorrencia = TipoOcorrencia
 					.valueOf(classeRegistro.getAnnotation(Metadados.class).ocorrencia());
 			boolean possuiDataPart = classeRegistro.isAnnotationPresent(PossuiDataPart.class);
@@ -101,8 +105,7 @@ public class RegistroService {
 			LOGGER.info("Nome registro pai: {}", nomeRegistroPai);
 			LOGGER.info("Ocorrência: {}", ocorrencia);
 
-			Optional<Long> idRegistroPai =
-					Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
+			Optional<Long> idRegistroPai = Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
 			if (!idRegistroPai.isPresent()) {
 				throw new IllegalStateException(
 						"Não foi encontrado última referência para o registro pai informado: "
@@ -114,13 +117,13 @@ public class RegistroService {
 			LOGGER.info("idRegistroPai: {}", idRegistroPai.get());
 			LOGGER.info("idRegistroAtual: {}", idRegistroAtual);
 
-
-			Object instanciaClasseRegistro =
-					obterInstanciaDeRegistro(teaDataCarga, linha, classeRegistro, ocorrencia,
-							possuiDataPart, idRegistroPai.get(), idRegistroAtual);
-			registrosProcessados.add((Entity) instanciaClasseRegistro);
+			Object instanciaClasseRegistro = obterInstanciaDeRegistro(teaDataCarga, linha, classeRegistro, ocorrencia,
+					possuiDataPart, idRegistroPai.get(), idRegistroAtual);
+			registrosProcessados.add(instanciaClasseRegistro);
 			cacheDeRegistrosPai.put(nomeRegistroAtual, idRegistroAtual);
 		}
+
+		repository.persistAllEntities(registrosProcessados);
 
 		return registrosProcessados;
 	}
@@ -131,13 +134,11 @@ public class RegistroService {
 		Object instanciaClasseRegistro = null;
 
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && possuiDataPart) {
-			instanciaClasseRegistro =
-					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai, teaDataCarga);
+			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai, teaDataCarga);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && !possuiDataPart) {
-			instanciaClasseRegistro =
-					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai);
+			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.MULTIPLA) && possuiDataPart) {
@@ -158,4 +159,3 @@ public class RegistroService {
 				String.valueOf(teaId.intValue()).concat(String.valueOf(incrementoFormatado)));
 	}
 }
-

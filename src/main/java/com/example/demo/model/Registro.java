@@ -5,7 +5,6 @@ import java.util.Objects;
 import com.example.demo.enums.TipoOcorrencia;
 import lombok.Getter;
 
-
 @Getter
 public class Registro {
 

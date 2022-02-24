@@ -36,7 +36,8 @@ public class RegistrosClassFactory {
 	private static final String PREFIXO = "Registro";
 	private static final String TIPO_DADO_ID = "NUMBER(19,0)";
 
-	private RegistrosClassFactory() {}
+	private RegistrosClassFactory() {
+	}
 
 	static void criaRegistros() {
 		List<Registro> registros = RegistroMetadataFactory.criaMetadados();
@@ -80,7 +81,6 @@ public class RegistrosClassFactory {
 			// registro.addConstructor(FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
 			// .addParameter(VariableSourceGenerator.create(String.class, "linha"))
 			// .addBodyCodeLine("super(linha);")).expands(RegistroBase.class);
-
 
 			// cria construtor com TipoOcorrencia.UNICA com dataPart
 			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)

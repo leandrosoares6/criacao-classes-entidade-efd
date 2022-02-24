@@ -24,11 +24,10 @@ public class RegistroBase {
 		String[] linhaArray = linha.split("\\|");
 		var indiceInicialCampos = 2;
 
-		List<Field> fieldsSorted =
-				Stream.of(getClass().getDeclaredFields()).filter(filtros())
-						.sorted((f1, f2) -> f1.getAnnotation(Indice.class).valor()
-								- f2.getAnnotation(Indice.class).valor())
-						.collect(Collectors.toList());
+		List<Field> fieldsSorted = Stream.of(getClass().getDeclaredFields()).filter(filtros())
+				.sorted((f1, f2) -> f1.getAnnotation(Indice.class).valor()
+						- f2.getAnnotation(Indice.class).valor())
+				.collect(Collectors.toList());
 
 		IntStream.range(0, linhaArray.length - indiceInicialCampos).forEach(i -> {
 			if (i < fieldsSorted.size()) {
@@ -80,7 +79,8 @@ public class RegistroBase {
 	private void setIdRegistro(Long id, String nomeCampo) {
 		Field idRegistro = null;
 		try {
-			idRegistro = getClass().getField(nomeCampo);
+			idRegistro = getClass().getDeclaredField(nomeCampo);
+			idRegistro.setAccessible(true);
 			idRegistro.set(this, id);
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
 				| IllegalAccessException e) {
@@ -91,7 +91,8 @@ public class RegistroBase {
 	private void setDataPart(Date dataPart) {
 		Field campoDataPart = null;
 		try {
-			campoDataPart = getClass().getField(CAMPO_DATA_PART);
+			campoDataPart = getClass().getDeclaredField(CAMPO_DATA_PART);
+			campoDataPart.setAccessible(true);
 			campoDataPart.set(this, dataPart);
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
 				| IllegalAccessException e) {
