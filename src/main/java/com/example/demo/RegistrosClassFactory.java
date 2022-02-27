@@ -6,6 +6,8 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import com.example.demo.enums.TipoOcorrencia;
 import com.example.demo.model.Campo;
@@ -36,8 +38,7 @@ public class RegistrosClassFactory {
 	private static final String PREFIXO = "Registro";
 	private static final String TIPO_DADO_ID = "NUMBER(19,0)";
 
-	private RegistrosClassFactory() {
-	}
+	private RegistrosClassFactory() {}
 
 	static void criaRegistros() {
 		List<Registro> registros = RegistroMetadataFactory.criaMetadados();
@@ -76,11 +77,6 @@ public class RegistrosClassFactory {
 			}
 
 			criaColunas(registroMetadados, registro);
-
-			// cria construtor com base na linha do arquivo
-			// registro.addConstructor(FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
-			// .addParameter(VariableSourceGenerator.create(String.class, "linha"))
-			// .addBodyCodeLine("super(linha);")).expands(RegistroBase.class);
 
 			// cria construtor com TipoOcorrencia.UNICA com dataPart
 			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)
@@ -192,6 +188,8 @@ public class RegistrosClassFactory {
 		if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.MULTIPLA)) {
 			var nomeColunaRegistroPai = String.format("%s%s_ID", PREFIXO_TABELAS,
 					registroMetadados.getNomeRegistroPai());
+			var nomeClasseRegistroPai =
+					new StringBuilder(PREFIXO).append(registroMetadados.getNomeRegistroPai());
 
 			registro.addField(VariableSourceGenerator
 					.create(TypeDeclarationSourceGenerator.create(Long.class), "idRegistroPai")
@@ -202,7 +200,25 @@ public class RegistrosClassFactory {
 							.addParameter("columnDefinition", VariableSourceGenerator
 									.create(String.format(FORMATO_STRING_CAMPOS, TIPO_DADO_ID)))
 
-					));
+					))
+					.addField(VariableSourceGenerator
+							.create(TypeDeclarationSourceGenerator
+									.create(nomeClasseRegistroPai.toString()), "registroPai")
+							.addModifier(Modifier.PRIVATE)
+							.addAnnotation(AnnotationSourceGenerator.create(JoinColumn.class)
+									.addParameter("name",
+											VariableSourceGenerator.create(String.format(
+													FORMATO_STRING_CAMPOS, nomeColunaRegistroPai)))
+									.addParameter("insertable",
+											VariableSourceGenerator.create("false"))
+									.addParameter("updatable",
+											VariableSourceGenerator.create("false")))
+							.addAnnotation(AnnotationSourceGenerator.create(ManyToOne.class)
+									.addParameter("targetEntity",
+											VariableSourceGenerator.create(nomeClasseRegistroPai
+													.append(".class").toString()))
+									.addParameter("fetch", VariableSourceGenerator
+											.create("javax.persistence.FetchType.LAZY"))));
 		}
 	}
 }

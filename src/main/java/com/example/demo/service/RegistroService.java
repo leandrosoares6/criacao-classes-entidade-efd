@@ -2,7 +2,6 @@ package com.example.demo.service;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,44 +27,9 @@ public class RegistroService {
 	private static final String PACOTE = "com.example.demo.model.registros";
 	private static final String REGISTRO_PAI = "0000";
 	private static final String SEPARADOR_LINHA = "\\|";
-	private final EntidadeRegistroFactory classFactory;
 
 	@Autowired
 	private RegistrosRepository repository;
-
-
-	public RegistroService(@Autowired EntidadeRegistroFactory classFactory) {
-		this.classFactory = classFactory;
-	}
-
-	public List<?> listaRegistros() {
-		List<Object> registros = new ArrayList<>();
-
-		BufferedReader conteudoArquivo = new BufferedReader(new StringReader(
-				"|0000|015|0|01082017|31082017|POSTO CARCARA LTDA|07659546000106||PI|194579760|2204204|12||B|1|\n"
-						+ "|0005|SCHULZ S.A|89219600|RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|4734516120||SCHULZ@SCHULZ.COM.BR|\n"
-						+ "|0150|3483|SCHULZ S.A.|1058|84693183000168||250338815|4209102||RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|\n"));
-		// +
-		// "|C113|1|0|3483|55|003||643332|07102019|42191084693183000168550030006433321986642250|\n"
-		// + "|E200|PI|01032021|31032021|\n" + "\n"));
-
-		conteudoArquivo.lines().filter(linha -> !linha.isBlank()).forEach(linha -> {
-			String[] campos = linha.split(SEPARADOR_LINHA);
-
-			if (Objects.isNull(ClassUtils.obterClassePorCaminho(PACOTE + "." + campos[1]))) {
-				throw new IllegalStateException(String
-						.format("A classe para o registro %s não foi encontrada.", campos[1]));
-			}
-			Object obj = classFactory.criaInstanciaDeRegistro("Registro" + campos[1], linha);
-
-			if (Objects.isNull(obj)) {
-				throw new IllegalStateException("Registro " + campos[1] + " não encontrado!");
-			}
-			registros.add(obj);
-		});
-
-		return registros;
-	}
 
 	public List<Object> processarRegistros(Long teaId, Date teaDataCarga, BufferedReader arquivoEfd)
 			throws IOException {
@@ -76,7 +40,7 @@ public class RegistroService {
 
 		for (String linha = arquivoEfd.readLine(); linha != null; linha = arquivoEfd.readLine()) {
 			var numeroLinhaAtual = contadorDeLinha.incrementAndGet();
-			var colunas = linha.split("\\|");
+			var colunas = linha.split(SEPARADOR_LINHA);
 			var nomeRegistroAtual = colunas[1];
 			var nomeClasseRegistroAtual = "Registro" + nomeRegistroAtual;
 			var caminhoClasse = PACOTE + "." + nomeClasseRegistroAtual;
@@ -90,13 +54,14 @@ public class RegistroService {
 			if (nomeRegistroAtual.equals(REGISTRO_PAI)) {
 				LOGGER.info("Processando registro {}", REGISTRO_PAI);
 
-				registrosProcessados.add(ClassUtils.obterInstancia(classeRegistro, linha,
-						teaId, teaDataCarga));
+				registrosProcessados
+						.add(ClassUtils.obterInstancia(classeRegistro, linha, teaId, teaDataCarga));
 				cacheDeRegistrosPai.put(nomeRegistroAtual, teaId);
 				continue;
 			}
 
-			String nomeRegistroPai = classeRegistro.getAnnotation(Metadados.class).nomeRegistroPai();
+			String nomeRegistroPai =
+					classeRegistro.getAnnotation(Metadados.class).nomeRegistroPai();
 			TipoOcorrencia ocorrencia = TipoOcorrencia
 					.valueOf(classeRegistro.getAnnotation(Metadados.class).ocorrencia());
 			boolean possuiDataPart = classeRegistro.isAnnotationPresent(PossuiDataPart.class);
@@ -105,7 +70,8 @@ public class RegistroService {
 			LOGGER.info("Nome registro pai: {}", nomeRegistroPai);
 			LOGGER.info("Ocorrência: {}", ocorrencia);
 
-			Optional<Long> idRegistroPai = Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
+			Optional<Long> idRegistroPai =
+					Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
 			if (!idRegistroPai.isPresent()) {
 				throw new IllegalStateException(
 						"Não foi encontrado última referência para o registro pai informado: "
@@ -117,13 +83,14 @@ public class RegistroService {
 			LOGGER.info("idRegistroPai: {}", idRegistroPai.get());
 			LOGGER.info("idRegistroAtual: {}", idRegistroAtual);
 
-			Object instanciaClasseRegistro = obterInstanciaDeRegistro(teaDataCarga, linha, classeRegistro, ocorrencia,
-					possuiDataPart, idRegistroPai.get(), idRegistroAtual);
+			Object instanciaClasseRegistro =
+					obterInstanciaDeRegistro(teaDataCarga, linha, classeRegistro, ocorrencia,
+							possuiDataPart, idRegistroPai.get(), idRegistroAtual);
 			registrosProcessados.add(instanciaClasseRegistro);
 			cacheDeRegistrosPai.put(nomeRegistroAtual, idRegistroAtual);
 		}
 
-		repository.persistAllEntities(registrosProcessados);
+		repository.salvarRegistros(registrosProcessados);
 
 		return registrosProcessados;
 	}
@@ -134,11 +101,13 @@ public class RegistroService {
 		Object instanciaClasseRegistro = null;
 
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && possuiDataPart) {
-			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai, teaDataCarga);
+			instanciaClasseRegistro =
+					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai, teaDataCarga);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.UNICA) && !possuiDataPart) {
-			instanciaClasseRegistro = ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai);
+			instanciaClasseRegistro =
+					ClassUtils.obterInstancia(classeRegistro, linha, idRegistroPai);
 		}
 
 		if (ocorrencia.equals(TipoOcorrencia.MULTIPLA) && possuiDataPart) {

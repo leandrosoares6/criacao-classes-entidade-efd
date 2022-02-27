@@ -24,10 +24,11 @@ public class RegistroBase {
 		String[] linhaArray = linha.split("\\|");
 		var indiceInicialCampos = 2;
 
-		List<Field> fieldsSorted = Stream.of(getClass().getDeclaredFields()).filter(filtros())
-				.sorted((f1, f2) -> f1.getAnnotation(Indice.class).valor()
-						- f2.getAnnotation(Indice.class).valor())
-				.collect(Collectors.toList());
+		List<Field> fieldsSorted =
+				Stream.of(getClass().getDeclaredFields()).filter(filtros())
+						.sorted((f1, f2) -> f1.getAnnotation(Indice.class).valor()
+								- f2.getAnnotation(Indice.class).valor())
+						.collect(Collectors.toList());
 
 		IntStream.range(0, linhaArray.length - indiceInicialCampos).forEach(i -> {
 			if (i < fieldsSorted.size()) {
@@ -102,7 +103,7 @@ public class RegistroBase {
 
 	private static Predicate<Field> filtros() {
 		return f -> !f.isAnnotationPresent(Id.class) && !f.getName().equals(CAMPO_DATA_PART)
-				&& !f.getName().equals(CAMPO_ID_REG_PAI);
+				&& !f.getName().equals(CAMPO_ID_REG_PAI) && !f.getName().equals("registroPai");
 	}
 
 }

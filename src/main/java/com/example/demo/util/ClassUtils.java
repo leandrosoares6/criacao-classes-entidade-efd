@@ -9,8 +9,7 @@ public class ClassUtils {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ClassUtils.class);
 
-	private ClassUtils() {
-	}
+	private ClassUtils() {}
 
 	public static Class<?> obterClassePorCaminho(String pathClass) {
 		Class<?> clazz = null;

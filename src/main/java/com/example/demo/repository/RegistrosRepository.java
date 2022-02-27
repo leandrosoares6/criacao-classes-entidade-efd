@@ -1,11 +1,9 @@
 package com.example.demo.repository;
 
 import java.util.List;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,11 +17,11 @@ public class RegistrosRepository {
     private EntityManager em;
 
     @Transactional
-    public void persistAllEntities(List<Object> entities) {
-        for (Object entity : entities) {
-            em.persist(entity);
-            LOGGER.info("Saving entity: {}", entity);
+    public void salvarRegistros(List<Object> registros) {
+        for (Object registro : registros) {
+            em.persist(registro);
+            LOGGER.info("Entidade persistida {}", registro);
         }
     }
-    
+
 }

@@ -8,8 +8,7 @@ public class RegistroMetadataFactory {
 	private static final boolean possuiDataPart = true;
 	private static List<Registro> registros = new ArrayList<>();
 
-	private RegistroMetadataFactory() {
-	}
+	private RegistroMetadataFactory() {}
 
 	public static List<Registro> criaMetadados() {
 		List<Campo> campos = new ArrayList<>();

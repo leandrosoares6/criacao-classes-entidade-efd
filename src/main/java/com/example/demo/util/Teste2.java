@@ -40,7 +40,8 @@ public class Teste2 {
 				continue;
 			}
 
-			Tuple<String, String> metadadosRegistroAtual = obterMetadadosRegistro(nomeRegistroAtual);
+			Tuple<String, String> metadadosRegistroAtual =
+					obterMetadadosRegistro(nomeRegistroAtual);
 			String nomeRegistroPai = metadadosRegistroAtual.getLeft();
 			String ocorrencia = metadadosRegistroAtual.getRight();
 
@@ -48,7 +49,8 @@ public class Teste2 {
 			System.out.println("Nome registro pai: " + nomeRegistroPai);
 			System.out.println("Ocorrência: " + ocorrencia);
 
-			Optional<Long> idRegistroPai = Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
+			Optional<Long> idRegistroPai =
+					Optional.ofNullable(cacheDeRegistrosPai.get(nomeRegistroPai));
 			if (!idRegistroPai.isPresent()) {
 				throw new IllegalStateException(
 						"Não foi encontrado última referência para o registro pai informado: "
@@ -548,6 +550,7 @@ public class Teste2 {
 
 }
 
+
 class Entity {
 	private Long id;
 	private String nome;
@@ -629,6 +632,7 @@ class Entity {
 	}
 
 }
+
 
 class Tuple<L, R> {
 	private final L l;

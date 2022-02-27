@@ -16,22 +16,29 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/registros")
 public class RegistroController {
 
-	private static final String CONTEUDO_ARQUIVO = "|0000|015|0|01082017|31082017|POSTO CARCARA LTDA|07659546000106||PI|194579760|2204204|12||B|1|\n"
-			+ "|0005|SCHULZ S.A|89219600|RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|4734516120||SCHULZ@SCHULZ.COM.BR|\n"
-			+ "|0150|3483|SCHULZ S.A.|1058|84693183000168||250338815|4209102||RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|\n";
+	private static final String CONTEUDO_ARQUIVO =
+			"|0000|015|0|01082017|31082017|POSTO CARCARA LTDA|07659546000106||PI|194579760|2204204|12||B|1|\n"
+					+ "|0005|SCHULZ S.A|89219600|RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|4734516120||SCHULZ@SCHULZ.COM.BR|\n"
+					+ "|0015|PI|194579760|\n"
+					+ "|0150|3483|SCHULZ S.A.|1058|84693183000168||250338815|4209102||RUA DONA FRANCISCA|6901||DISTRITO INDUSTRIAL|\n";
 
 	@Autowired
 	private RegistroService service;
 
-	@GetMapping
-	public ResponseEntity<List<?>> listaRegistros() {
-		return ResponseEntity.ok(service.listaRegistros());
-	}
-
 	@GetMapping("/processar")
 	public ResponseEntity<List<?>> processarRegistros() throws IOException {
-		return ResponseEntity.ok(service.processarRegistros(1L, new Date(),
-				new BufferedReader(new StringReader(CONTEUDO_ARQUIVO))));
+		// var arquivo = obterArquivo("files/arquivo_v15_exemplo.txt");
+		var arquivo = new BufferedReader(new StringReader(CONTEUDO_ARQUIVO));
+		return ResponseEntity.ok(service.processarRegistros(1L, new Date(), arquivo));
+	}
+
+	private BufferedReader obterArquivo(String nomeArquivo) {
+		try {
+			return new BufferedReader(new StringReader(nomeArquivo));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 }
