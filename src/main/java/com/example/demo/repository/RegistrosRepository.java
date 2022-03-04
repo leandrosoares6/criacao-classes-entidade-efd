@@ -18,9 +18,21 @@ public class RegistrosRepository {
 
     @Transactional
     public void salvarRegistros(List<Object> registros) {
-        for (Object registro : registros) {
+        registros.stream().forEach(registro -> {
             em.persist(registro);
             LOGGER.info("Entidade persistida {}", registro);
+        });
+        // for (Object registro : registros) {
+        // em.persist(registro);
+        // LOGGER.info("Entidade persistida {}", registro);
+        // }
+    }
+
+    @Transactional
+    public void salvarRegistrosWhile(List<Object> registros) {
+        for (Object registro : registros) {
+        em.persist(registro);
+        LOGGER.info("Entidade persistida {}", registro);
         }
     }
 

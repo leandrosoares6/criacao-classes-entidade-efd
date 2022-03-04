@@ -32,6 +32,7 @@ import lombok.ToString;
 
 public class RegistrosClassFactory {
 	private static final String FORMATO_STRING_CAMPOS = "\"%s\"";
+	private static final String FORMATO_STRING_FK = "@javax.persistence.ForeignKey(name = \"FK_TAB_EFD_%s_%s\")";
 	private static final String PACOTE = "com.example.demo.model.registros";
 	private static final String SCHEMA = "APL_EFD";
 	private static final String PREFIXO_TABELAS = "TAB_EFD_";
@@ -212,7 +213,11 @@ public class RegistrosClassFactory {
 									.addParameter("insertable",
 											VariableSourceGenerator.create("false"))
 									.addParameter("updatable",
-											VariableSourceGenerator.create("false")))
+											VariableSourceGenerator.create("false"))
+									.addParameter("foreignKey",
+											VariableSourceGenerator.create(String.format(
+													FORMATO_STRING_FK, registroMetadados.getNome(),
+													registroMetadados.getNomeRegistroPai()))))
 							.addAnnotation(AnnotationSourceGenerator.create(ManyToOne.class)
 									.addParameter("targetEntity",
 											VariableSourceGenerator.create(nomeClasseRegistroPai

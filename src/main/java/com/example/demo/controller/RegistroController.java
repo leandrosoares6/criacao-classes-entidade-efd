@@ -1,16 +1,18 @@
 package com.example.demo.controller;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.Date;
 import java.util.List;
 import com.example.demo.service.RegistroService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import lombok.SneakyThrows;
 
 @RestController
 @RequestMapping("/registros")
@@ -27,18 +29,15 @@ public class RegistroController {
 
 	@GetMapping("/processar")
 	public ResponseEntity<List<?>> processarRegistros() throws IOException {
-		// var arquivo = obterArquivo("files/arquivo_v15_exemplo.txt");
-		var arquivo = new BufferedReader(new StringReader(CONTEUDO_ARQUIVO));
-		return ResponseEntity.ok(service.processarRegistros(1L, new Date(), arquivo));
+		var arquivo = obterArquivo("files/arquivo_v15_exemplo.txt");
+		// var arquivo = new BufferedReader(new StringReader(CONTEUDO_ARQUIVO));
+		return ResponseEntity.ok(service.processarRegistrosStream(1L, new Date(), arquivo));
 	}
 
-	private BufferedReader obterArquivo(String nomeArquivo) {
-		try {
-			return new BufferedReader(new StringReader(nomeArquivo));
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
+	@SneakyThrows
+	private BufferedReader obterArquivo(String caminhoArquivo) {
+		File arquivo = new ClassPathResource(caminhoArquivo).getFile();
+		return new BufferedReader(new java.io.FileReader(arquivo));
 	}
 
 }
