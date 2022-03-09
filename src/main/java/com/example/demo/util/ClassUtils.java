@@ -2,6 +2,7 @@ package com.example.demo.util;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import com.example.demo.model.RegistroBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +28,15 @@ public class ClassUtils {
 		Object instancia = null;
 		Class<?>[] classes = new Class<?>[args.length];
 		for (int i = 0; i < args.length; i++) {
-			classes[i] = args[i].getClass();
+			var clazz = args[i].getClass();
+			if (RegistroBase.class.isAssignableFrom(clazz)) {
+				clazz = Object.class;
+			}
+			classes[i] = clazz;
 		}
 
 		try {
-			Constructor<?> construtor = classe.getConstructor(classes);
+			Constructor<?> construtor = classe.getDeclaredConstructor(classes);
 			construtor.setAccessible(true);
 			instancia = construtor.newInstance(args);
 		} catch (NoSuchMethodException | SecurityException | InstantiationException

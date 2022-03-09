@@ -8,6 +8,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.MapsId;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import com.example.demo.enums.TipoOcorrencia;
 import com.example.demo.model.Campo;
@@ -32,9 +34,11 @@ import lombok.ToString;
 
 public class RegistrosClassFactory {
 	private static final String FORMATO_STRING_CAMPOS = "\"%s\"";
-	private static final String FORMATO_STRING_FK = "@javax.persistence.ForeignKey(name = \"FK_TAB_EFD_%s_%s\")";
+	private static final String FORMATO_STRING_FK =
+			"@javax.persistence.ForeignKey(name = \"FK_TAB_EFD_%s_%s\")";
 	private static final String PACOTE = "com.example.demo.model.registros";
-	private static final String SCHEMA = "APL_EFD";
+	// private static final String SCHEMA = "APL_EFD";
+	private static final String SCHEMA = "AOO_TESTS";
 	private static final String PREFIXO_TABELAS = "TAB_EFD_";
 	private static final String PREFIXO = "Registro";
 	private static final String TIPO_DADO_ID = "NUMBER(19,0)";
@@ -82,23 +86,26 @@ public class RegistrosClassFactory {
 			// cria construtor com TipoOcorrencia.UNICA com dataPart
 			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)
 					&& registroMetadados.isPossuiDataPart()) {
+				var assinaturaParametroRegistroPai =
+						registroMetadados.getNome().equals("0000") ? Long.class : Object.class;
 				registro.addConstructor(FunctionSourceGenerator.create()
 						.addModifier(Modifier.PUBLIC)
 						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
-						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
+						.addParameter(VariableSourceGenerator.create(assinaturaParametroRegistroPai,
+								"registroPai"))
 						.addParameter(VariableSourceGenerator.create(Date.class, "dataPart"))
-						.addBodyCodeLine("super(linha, id, dataPart);"))
+						.addBodyCodeLine("super(linha, registroPai, dataPart);"))
 						.expands(RegistroBase.class);
 			}
 
 			// cria construtor com TipoOcorrencia.UNICA sem dataPart
 			if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA)
 					&& !registroMetadados.isPossuiDataPart()) {
-				registro.addConstructor(
-						FunctionSourceGenerator.create().addModifier(Modifier.PUBLIC)
-								.addParameter(VariableSourceGenerator.create(String.class, "linha"))
-								.addParameter(VariableSourceGenerator.create(Long.class, "id"))
-								.addBodyCodeLine("super(linha, id);"))
+				registro.addConstructor(FunctionSourceGenerator.create()
+						.addModifier(Modifier.PUBLIC)
+						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
+						.addParameter(VariableSourceGenerator.create(Object.class, "registroPai"))
+						.addBodyCodeLine("super(linha, registroPai, null);"))
 						.expands(RegistroBase.class);
 			}
 
@@ -109,9 +116,9 @@ public class RegistrosClassFactory {
 						.addModifier(Modifier.PUBLIC)
 						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
 						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
-						.addParameter(VariableSourceGenerator.create(Long.class, "idRegistroPai"))
+						.addParameter(VariableSourceGenerator.create(Object.class, "registroPai"))
 						.addParameter(VariableSourceGenerator.create(Date.class, "dataPart"))
-						.addBodyCodeLine("super(linha, id, idRegistroPai, dataPart);"))
+						.addBodyCodeLine("super(linha, id, registroPai, dataPart);"))
 						.expands(RegistroBase.class);
 			}
 
@@ -122,8 +129,8 @@ public class RegistrosClassFactory {
 						.addModifier(Modifier.PUBLIC)
 						.addParameter(VariableSourceGenerator.create(String.class, "linha"))
 						.addParameter(VariableSourceGenerator.create(Long.class, "id"))
-						.addParameter(VariableSourceGenerator.create(Long.class, "idRegistroPai"))
-						.addBodyCodeLine("super(linha, id, idRegistroPai);"))
+						.addParameter(VariableSourceGenerator.create(Object.class, "registroPai"))
+						.addBodyCodeLine("super(linha, id, registroPai, null);"))
 						.expands(RegistroBase.class);
 			}
 
@@ -186,44 +193,34 @@ public class RegistrosClassFactory {
 					));
 		}
 
-		if (registroMetadados.getOcorrencia().equals(TipoOcorrencia.MULTIPLA)) {
-			var nomeColunaRegistroPai = String.format("%s%s_ID", PREFIXO_TABELAS,
-					registroMetadados.getNomeRegistroPai());
+		if (!registroMetadados.getNome().equals("0000")) {
+			boolean ocorrenciaUnica =
+					registroMetadados.getOcorrencia().equals(TipoOcorrencia.UNICA);
+			Class<?> anotacao = ocorrenciaUnica ? OneToOne.class : ManyToOne.class;
+			var nomeColunaRegistroPai = ocorrenciaUnica ? "ID"
+					: String.format("%s%s_ID", PREFIXO_TABELAS,
+							registroMetadados.getNomeRegistroPai());
 			var nomeClasseRegistroPai =
 					new StringBuilder(PREFIXO).append(registroMetadados.getNomeRegistroPai());
-
-			registro.addField(VariableSourceGenerator
-					.create(TypeDeclarationSourceGenerator.create(Long.class), "idRegistroPai")
+			VariableSourceGenerator campoChaveEstrangeira = VariableSourceGenerator
+					.create(TypeDeclarationSourceGenerator.create(nomeClasseRegistroPai.toString()),
+							"registroPai")
 					.addModifier(Modifier.PRIVATE)
-					.addAnnotation(AnnotationSourceGenerator.create(Column.class)
-							.addParameter("name", VariableSourceGenerator.create(
-									String.format(FORMATO_STRING_CAMPOS, nomeColunaRegistroPai)))
-							.addParameter("columnDefinition", VariableSourceGenerator
-									.create(String.format(FORMATO_STRING_CAMPOS, TIPO_DADO_ID)))
+					.addAnnotation(AnnotationSourceGenerator.create(anotacao))
+					.addAnnotation(AnnotationSourceGenerator.create(JoinColumn.class)
+							.addParameter("name",
+									VariableSourceGenerator.create(String
+											.format(FORMATO_STRING_CAMPOS, nomeColunaRegistroPai)))
+							.addParameter("foreignKey",
+									VariableSourceGenerator.create(String.format(FORMATO_STRING_FK,
+											registroMetadados.getNome(),
+											registroMetadados.getNomeRegistroPai()))));
 
-					))
-					.addField(VariableSourceGenerator
-							.create(TypeDeclarationSourceGenerator
-									.create(nomeClasseRegistroPai.toString()), "registroPai")
-							.addModifier(Modifier.PRIVATE)
-							.addAnnotation(AnnotationSourceGenerator.create(JoinColumn.class)
-									.addParameter("name",
-											VariableSourceGenerator.create(String.format(
-													FORMATO_STRING_CAMPOS, nomeColunaRegistroPai)))
-									.addParameter("insertable",
-											VariableSourceGenerator.create("false"))
-									.addParameter("updatable",
-											VariableSourceGenerator.create("false"))
-									.addParameter("foreignKey",
-											VariableSourceGenerator.create(String.format(
-													FORMATO_STRING_FK, registroMetadados.getNome(),
-													registroMetadados.getNomeRegistroPai()))))
-							.addAnnotation(AnnotationSourceGenerator.create(ManyToOne.class)
-									.addParameter("targetEntity",
-											VariableSourceGenerator.create(nomeClasseRegistroPai
-													.append(".class").toString()))
-									.addParameter("fetch", VariableSourceGenerator
-											.create("javax.persistence.FetchType.LAZY"))));
+			if (ocorrenciaUnica) {
+				campoChaveEstrangeira.addAnnotation(AnnotationSourceGenerator.create(MapsId.class));
+			}
+
+			registro.addField(campoChaveEstrangeira);
 		}
 	}
 }

@@ -2,7 +2,6 @@ package com.example.demo.controller;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import com.example.demo.service.RegistroService;
@@ -28,10 +27,10 @@ public class RegistroController {
 	private RegistroService service;
 
 	@GetMapping("/processar")
-	public ResponseEntity<List<?>> processarRegistros() throws IOException {
-		var arquivo = obterArquivo("files/arquivo_v15_exemplo.txt");
+	public ResponseEntity<List<?>> processarRegistros() {
+		var arquivo = obterArquivo("files/arquivo_v15_exemplo2.txt");
 		// var arquivo = new BufferedReader(new StringReader(CONTEUDO_ARQUIVO));
-		return ResponseEntity.ok(service.processarRegistrosStream(1L, new Date(), arquivo));
+		return ResponseEntity.ok(service.processarRegistros(1L, new Date(), arquivo));
 	}
 
 	@SneakyThrows

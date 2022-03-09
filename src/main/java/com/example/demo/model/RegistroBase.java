@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -15,8 +16,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegistroBase {
 
+	private static final String REGISTRO_0000 = "Registro0000";
 	private static final String CAMPO_ID_REG = "id";
-	private static final String CAMPO_ID_REG_PAI = "idRegistroPai";
+	private static final String CAMPO_REG_PAI = "registroPai";
 	private static final String CAMPO_DATA_PART = "dataPart";
 	private static final String FORMATO_DATA_ARQUIVO = "ddMMyyyy";
 
@@ -53,48 +55,32 @@ public class RegistroBase {
 		});
 	}
 
-	protected RegistroBase(String linha, Long id) {
+	protected RegistroBase(String linha, Object registroPai, Date dataPart) {
 		this(linha);
-		setIdRegistro(id, CAMPO_ID_REG);
+		if (!Objects.isNull(dataPart))
+			setFieldObjectValue(dataPart, CAMPO_DATA_PART);
+		if (getClass().getSimpleName().equals(REGISTRO_0000)) {
+			setFieldObjectValue(registroPai, CAMPO_ID_REG);
+			return;
+		}
+
+		setFieldObjectValue(registroPai, CAMPO_REG_PAI);
 	}
 
-	protected RegistroBase(String linha, Long id, Date dataPart) {
+	protected RegistroBase(String linha, Long id, Object registroPai, Date dataPart) {
 		this(linha);
-		setIdRegistro(id, CAMPO_ID_REG);
-		setDataPart(dataPart);
+		setFieldObjectValue(id, CAMPO_ID_REG);
+		setFieldObjectValue(registroPai, CAMPO_REG_PAI);
+		if (!Objects.isNull(dataPart))
+			setFieldObjectValue(dataPart, CAMPO_DATA_PART);
 	}
 
-	protected RegistroBase(String linha, Long id, Long idRegistroPai) {
-		this(linha);
-		setIdRegistro(id, CAMPO_ID_REG);
-		setIdRegistro(idRegistroPai, CAMPO_ID_REG_PAI);
-	}
-
-	protected RegistroBase(String linha, Long id, Long idRegistroPai, Date dataPart) {
-		this(linha);
-		setIdRegistro(id, CAMPO_ID_REG);
-		setIdRegistro(idRegistroPai, CAMPO_ID_REG_PAI);
-		setDataPart(dataPart);
-	}
-
-	private void setIdRegistro(Long id, String nomeCampo) {
+	private void setFieldObjectValue(Object value, String nomeCampo) {
 		Field idRegistro = null;
 		try {
 			idRegistro = getClass().getDeclaredField(nomeCampo);
 			idRegistro.setAccessible(true);
-			idRegistro.set(this, id);
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
-				| IllegalAccessException e) {
-			e.printStackTrace();
-		}
-	}
-
-	private void setDataPart(Date dataPart) {
-		Field campoDataPart = null;
-		try {
-			campoDataPart = getClass().getDeclaredField(CAMPO_DATA_PART);
-			campoDataPart.setAccessible(true);
-			campoDataPart.set(this, dataPart);
+			idRegistro.set(this, value);
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException
 				| IllegalAccessException e) {
 			e.printStackTrace();
@@ -103,7 +89,7 @@ public class RegistroBase {
 
 	private static Predicate<Field> filtros() {
 		return f -> !f.isAnnotationPresent(Id.class) && !f.getName().equals(CAMPO_DATA_PART)
-				&& !f.getName().equals(CAMPO_ID_REG_PAI) && !f.getName().equals("registroPai");
+				&& !f.getName().equals(CAMPO_REG_PAI);
 	}
 
 }

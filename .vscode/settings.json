@@ -3,5 +3,6 @@
     "formatFiles.extensionsToInclude": "java",
     "formatFiles.excludedFolders": [
        "target"
-    ]
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
